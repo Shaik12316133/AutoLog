@@ -1,0 +1,624 @@
+{
+  "name": "AutoLog – Vehicle Management Full Workflow (Upgraded)",
+  "nodes": [
+
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "autolog-main",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "node-webhook-main",
+      "name": "Webhook – Main Entry",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "autolog-main"
+    },
+
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.body.event }}", "rightValue": "setup_save", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Setup / Profile"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.body.event }}", "rightValue": "service_add", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Service Record"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.body.event }}", "rightValue": "ai_analytics", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "AI Analytics"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.body.event }}", "rightValue": "ai_chat", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "AI Chat"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.body.event }}", "rightValue": "reminder_check", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Reminder Check"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [{ "leftValue": "={{ $json.body.event }}", "rightValue": "manual_sync", "operator": { "type": "string", "operation": "equals" } }],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Manual Sync"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-router",
+      "name": "Route by Event",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [280, 300]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst vehicle = body.vehicle || {};\nconst settings = body.settings || {};\n\nreturn [{\n  json: {\n    event: 'setup_save',\n    ownerName: settings.ownerName || vehicle.ownerName || 'Vehicle Owner',\n    ownerEmail: settings.ownerEmail || vehicle.ownerEmail || '',\n    vehicleMake: vehicle.make || '',\n    vehicleModel: vehicle.model || '',\n    vehicleYear: vehicle.year || '',\n    fuelType: vehicle.fuelType || 'Petrol',\n    regNumber: vehicle.regNumber || '',\n    currentMileage: vehicle.currentMileage || 0,\n    purchasePrice: vehicle.purchasePrice || 0,\n    purchaseDate: vehicle.purchaseDate || '',\n    engine: vehicle.engine || '',\n    transmission: vehicle.transmission || 'Manual',\n    color: vehicle.color || '',\n    avgMonthlyKm: vehicle.avgMonthlyKm || 700,\n    webhookUrl: settings.webhookUrl || '',\n    savedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-setup-parse",
+      "name": "Parse Setup Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 60]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.ownerEmail }}",
+        "subject": "=🚗 AutoLog – Vehicle Profile Saved: {{ $json.vehicleMake }} {{ $json.vehicleModel }}",
+        "emailType": "html",
+        "message": "=<!DOCTYPE html><html><body style=\"font-family:Arial,sans-serif;background:#0a0a0b;color:#f0ede8;padding:32px;\"><div style=\"max-width:600px;margin:0 auto;background:#111114;border:1px solid #2a2a35;border-radius:16px;overflow:hidden;\"><div style=\"background:#e8b84b;padding:24px 32px;\"><h1 style=\"margin:0;color:#000;font-size:24px;\">🚗 AutoLog</h1><p style=\"margin:4px 0 0;color:#000;font-size:13px;\">Vehicle Profile Saved Successfully</p></div><div style=\"padding:32px;\"><p style=\"color:#9999aa;\">Hello <strong style=\"color:#f0ede8;\">{{ $json.ownerName }}</strong>,</p><p style=\"color:#9999aa;\">Your vehicle profile has been saved in AutoLog. Here's a summary:</p><table style=\"width:100%;border-collapse:collapse;margin:24px 0;\"><tr style=\"border-bottom:1px solid #2a2a35;\"><td style=\"padding:10px 0;color:#9999aa;font-size:13px;\">Vehicle</td><td style=\"padding:10px 0;color:#f0ede8;font-weight:bold;\">{{ $json.vehicleYear }} {{ $json.vehicleMake }} {{ $json.vehicleModel }}</td></tr><tr style=\"border-bottom:1px solid #2a2a35;\"><td style=\"padding:10px 0;color:#9999aa;font-size:13px;\">Registration</td><td style=\"padding:10px 0;color:#e8b84b;font-family:monospace;\">{{ $json.regNumber }}</td></tr><tr style=\"border-bottom:1px solid #2a2a35;\"><td style=\"padding:10px 0;color:#9999aa;font-size:13px;\">Fuel Type</td><td style=\"padding:10px 0;color:#f0ede8;\">{{ $json.fuelType }}</td></tr><tr style=\"border-bottom:1px solid #2a2a35;\"><td style=\"padding:10px 0;color:#9999aa;font-size:13px;\">Current Mileage</td><td style=\"padding:10px 0;color:#f0ede8;\">{{ $json.currentMileage }} km</td></tr><tr style=\"border-bottom:1px solid #2a2a35;\"><td style=\"padding:10px 0;color:#9999aa;font-size:13px;\">Purchase Price</td><td style=\"padding:10px 0;color:#f0ede8;\">₹{{ $json.purchasePrice }}</td></tr><tr><td style=\"padding:10px 0;color:#9999aa;font-size:13px;\">Avg Monthly KM</td><td style=\"padding:10px 0;color:#f0ede8;\">{{ $json.avgMonthlyKm }} km</td></tr></table><p style=\"color:#9999aa;font-size:12px;\">Start logging service records to get AI-powered health scores and cost analysis!</p></div><div style=\"padding:16px 32px;border-top:1px solid #2a2a35;text-align:center;\"><p style=\"color:#888899;font-size:11px;font-family:monospace;\">AutoLog Vehicle Intelligence System · {{ $json.savedAt }}</p></div></div></body></html>",
+        "options": {}
+      },
+      "id": "node-setup-email",
+      "name": "Gmail – Welcome Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [840, 60],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-oauth-cred",
+          "name": "Gmail – AutoLog"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"event\": \"setup_save\", \"message\": \"Vehicle profile saved. Welcome email sent to \" + $('Parse Setup Data').first().json.ownerEmail }",
+        "options": {}
+      },
+      "id": "node-setup-respond",
+      "name": "Respond – Setup OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 60]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst vehicle = body.vehicle || {};\nconst service = body.service || {};\nconst settings = body.settings || {};\n\nconst totalCost = (service.parts || 0) + (service.labour || 0);\nconst costPerKm = vehicle.currentMileage > 0 ? (totalCost / vehicle.currentMileage).toFixed(2) : '0.00';\n\nreturn [{\n  json: {\n    event: 'service_add',\n    ownerName: settings.ownerName || 'Vehicle Owner',\n    ownerEmail: settings.ownerEmail || '',\n    vehicleMake: vehicle.make || '',\n    vehicleModel: vehicle.model || '',\n    vehicleYear: vehicle.year || '',\n    regNumber: vehicle.regNumber || '',\n    currentMileage: vehicle.currentMileage || 0,\n    serviceDate: service.date || new Date().toISOString().split('T')[0],\n    serviceType: service.type || 'General Service',\n    serviceCategory: service.category || 'routine',\n    workshop: service.workshop || 'Not specified',\n    mileageAtService: service.mileage || vehicle.currentMileage || 0,\n    partsCost: service.parts || 0,\n    labourCost: service.labour || 0,\n    totalCost: totalCost,\n    nextServiceKm: service.nextKm || 0,\n    nextServiceDate: service.nextDate || '',\n    notes: service.notes || '',\n    invoiceRef: service.invoiceRef || '',\n    costPerKm: costPerKm,\n    loggedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-service-parse",
+      "name": "Parse Service Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 200]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.ownerEmail }}",
+        "subject": "=🛠️ Service Logged – {{ $json.serviceType }} | {{ $json.vehicleMake }} {{ $json.vehicleModel }}",
+        "emailType": "html",
+        "message": "=<!DOCTYPE html><html><body style=\"font-family:Arial,sans-serif;background:#0a0a0b;color:#f0ede8;padding:32px;\"><div style=\"max-width:600px;margin:0 auto;background:#111114;border:1px solid #2a2a35;border-radius:16px;overflow:hidden;\"><div style=\"background:#18181d;padding:24px 32px;border-bottom:1px solid #2a2a35;\"><h2 style=\"margin:0;color:#f0ede8;font-size:18px;\">🛠️ Service Record Logged</h2><p style=\"margin:2px 0 0;color:#9999aa;font-size:12px;font-family:monospace;\">{{ $json.vehicleYear }} {{ $json.vehicleMake }} {{ $json.vehicleModel }} · {{ $json.regNumber }}</p></div><div style=\"padding:32px;\"><div style=\"background:#18181d;border:1px solid #2a2a35;border-radius:12px;padding:20px;margin-bottom:20px;\"><div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;\"><div><h3 style=\"margin:0;color:#f0ede8;font-size:16px;\">{{ $json.serviceType }}</h3><p style=\"margin:4px 0 0;color:#9999aa;font-size:12px;\">{{ $json.serviceDate }} · {{ $json.workshop }}</p></div><div style=\"text-align:right;\"><div style=\"font-size:24px;font-weight:bold;color:#e8b84b;font-family:monospace;\">₹{{ $json.totalCost }}</div><div style=\"font-size:11px;color:#9999aa;\">Total Cost</div></div></div><table style=\"width:100%;border-collapse:collapse;\"><tr style=\"border-bottom:1px solid #2a2a35;\"><td style=\"padding:8px 0;color:#9999aa;font-size:12px;\">Parts Cost</td><td style=\"padding:8px 0;color:#f0ede8;text-align:right;font-family:monospace;\">₹{{ $json.partsCost }}</td></tr><tr style=\"border-bottom:1px solid #2a2a35;\"><td style=\"padding:8px 0;color:#9999aa;font-size:12px;\">Labour Cost</td><td style=\"padding:8px 0;color:#f0ede8;text-align:right;font-family:monospace;\">₹{{ $json.labourCost }}</td></tr><tr style=\"border-bottom:1px solid #2a2a35;\"><td style=\"padding:8px 0;color:#9999aa;font-size:12px;\">Mileage at Service</td><td style=\"padding:8px 0;color:#f0ede8;text-align:right;font-family:monospace;\">{{ $json.mileageAtService }} km</td></tr><tr><td style=\"padding:8px 0;color:#9999aa;font-size:12px;\">Category</td><td style=\"padding:8px 0;color:#4be89a;text-align:right;font-size:11px;\">{{ $json.serviceCategory.toUpperCase() }}</td></tr></table></div>{{ $json.notes ? '<p style=\"color:#9999aa;font-size:13px;\"><strong style=\"color:#f0ede8;\">Notes:</strong> ' + $json.notes + '</p>' : '' }}</div><div style=\"padding:16px 32px;border-top:1px solid #2a2a35;text-align:center;\"><p style=\"color:#888899;font-size:11px;font-family:monospace;\">AutoLog Vehicle Intelligence · {{ $json.loggedAt }}</p></div></div></body></html>",
+        "options": {}
+      },
+      "id": "node-service-email",
+      "name": "Gmail – Service Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [840, 200],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-oauth-cred",
+          "name": "Gmail – AutoLog"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"event\": \"service_add\", \"message\": \"Service record logged and email sent.\", \"serviceType\": $('Parse Service Record').first().json.serviceType, \"totalCost\": $('Parse Service Record').first().json.totalCost }",
+        "options": {}
+      },
+      "id": "node-service-respond",
+      "name": "Respond – Service OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 200]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst vehicle = body.vehicle || {};\nconst services = body.services || [];\nconst costs = body.costs || {};\nconst health = body.health || {};\nconst resale = body.resale || {};\nconst maintenance = body.maintenance || {};\nconst patterns = body.patterns || {};\nconst question = body.question || 'Provide a full vehicle health and cost analysis.';\nconst settings = body.settings || {};\n\nconst serviceList = services.slice(0, 10).map((s, i) =>\n  `${i+1}. ${s.date} – ${s.type} (₹${((s.parts||0)+(s.labour||0)).toLocaleString('en-IN')}) at ${s.workshop||'N/A'} [${s.mileage||0} km]`\n).join('\\n');\n\nconst analyticsPrompt = `You are AutoLog AI, an expert automotive analyst and vehicle health advisor specializing in Indian vehicles and the Indian market.\n\nVEHICLE DATA:\n═══════════════════════════════════\nVehicle: ${vehicle.year||''} ${vehicle.make||''} ${vehicle.model||''}\nRegistration: ${vehicle.regNumber||'N/A'}\nFuel: ${vehicle.fuelType||'N/A'} | Transmission: ${vehicle.transmission||'N/A'}\nEngine: ${vehicle.engine||'N/A'} | Color: ${vehicle.color||'N/A'}\nCurrent Mileage: ${(vehicle.currentMileage||0).toLocaleString('en-IN')} km\nPurchase Price: ₹${(vehicle.purchasePrice||0).toLocaleString('en-IN')}\nPurchase Date: ${vehicle.purchaseDate||'N/A'}\nAvg Monthly Usage: ${vehicle.avgMonthlyKm||700} km/month\n\nCOST ANALYSIS:\nTotal Cost of Ownership: ₹${(costs.totalCost||0).toLocaleString('en-IN')}\nAvg Monthly Cost: ₹${(costs.avgMonthlyCost||0).toLocaleString('en-IN')}\nCost per KM: ₹${costs.costPerKm||'0.00'}\nMaintenance Ratio: ${costs.maintenanceRatio||0}%\n\nHEALTH METRICS:\nHealth Score: ${health.score||0}/100\nVerdict: ${health.verdict||'N/A'}\n\nRESALE ESTIMATES:\nEstimated Market Value: ₹${(resale.estimatedValue||0).toLocaleString('en-IN')}\nValue Retained: ${resale.valueRetained||0}%\nDepreciation Loss: ₹${(resale.depreciationLoss||0).toLocaleString('en-IN')}\n\nMAINTENANCE STATUS:\nOil Change Overdue: ${maintenance.oilChangeDue ? 'YES ⚠️' : 'No'}\nKM Since Last Oil Change: ${(maintenance.kmSinceOil||0).toLocaleString('en-IN')} km\nNext Oil Service at: ${(maintenance.nextOilKm||0).toLocaleString('en-IN')} km\n\nISSUE PATTERNS:\nRecurring Brake Issues: ${patterns.brakeRecurring ? 'YES ⚠️' : 'No'}\nTotal Brake Services: ${patterns.brakeCount||0}\nRecent Brake Services (90d): ${patterns.recentBrakes||0}\n\nSERVICE HISTORY (Last 10 records):\n${serviceList||'No service records found.'}\n\nUSER QUESTION: ${question}\n\nAnalysis rules:\n- Use ₹ for all monetary values (Indian Rupees)\n- Be direct, specific, and data-driven\n- Flag recurring issues and maintenance patterns\n- Consider Indian road conditions and service intervals\n- Compare against benchmarks for Indian vehicles\n- Always end with 3 prioritized ACTION ITEMS\n- Format response clearly with sections`;\n\nreturn [{\n  json: {\n    analyticsPrompt,\n    ownerEmail: settings.ownerEmail || '',\n    ownerName: settings.ownerName || 'Vehicle Owner',\n    vehicleMake: vehicle.make || '',\n    vehicleModel: vehicle.model || '',\n    regNumber: vehicle.regNumber || '',\n    question,\n    requestedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-analytics-prompt",
+      "name": "Build AI Analytics Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 340]
+    },
+
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 2048
+        }
+      },
+      "id": "node-groq-model-analytics",
+      "name": "Groq Model – Analytics",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [840, 500],
+      "credentials": {
+        "groqApi": {
+          "id": "groq-api-cred",
+          "name": "Groq API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Build AI Analytics Prompt').first().json.analyticsPrompt }}",
+        "options": {
+          "systemMessage": "You are AutoLog AI, an expert automotive analyst specializing in Indian vehicles. Always use ₹ for currency. Be data-driven, specific, and actionable. Structure your response clearly with sections and always end with 3 prioritized action items."
+        }
+      },
+      "id": "node-analytics-agent",
+      "name": "Groq AI – Analytics Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [840, 340]
+    },
+    {
+      "parameters": {
+        "jsCode": "const promptData = $('Build AI Analytics Prompt').first().json;\nconst agentOutput = $input.first().json;\nconst aiText = agentOutput.output || 'AI analysis unavailable.';\n\nreturn [{\n  json: {\n    success: true,\n    event: 'ai_analytics',\n    aiResponse: aiText,\n    question: promptData.question,\n    ownerEmail: promptData.ownerEmail,\n    ownerName: promptData.ownerName,\n    vehicleMake: promptData.vehicleMake,\n    vehicleModel: promptData.vehicleModel,\n    regNumber: promptData.regNumber,\n    model: 'llama-3.3-70b-versatile',\n    generatedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-analytics-extract",
+      "name": "Extract AI Analytics Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 340]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.ownerEmail }}",
+        "subject": "=🧠 AI Analysis Ready – {{ $json.vehicleMake }} {{ $json.vehicleModel }}",
+        "emailType": "html",
+        "message": "=<!DOCTYPE html><html><body style=\"font-family:Arial,sans-serif;background:#0a0a0b;color:#f0ede8;padding:32px;\"><div style=\"max-width:640px;margin:0 auto;background:#111114;border:1px solid #2a2a35;border-radius:16px;overflow:hidden;\"><div style=\"background:linear-gradient(135deg,#18181d,#1f1f26);padding:24px 32px;border-bottom:1px solid #2a2a35;\"><h1 style=\"margin:0;color:#e8b84b;font-size:22px;\">🧠 AI Vehicle Analysis</h1><p style=\"margin:4px 0 0;color:#9999aa;font-size:12px;font-family:monospace;\">{{ $json.vehicleMake }} {{ $json.vehicleModel }} · {{ $json.regNumber }}</p></div><div style=\"padding:32px;\"><div style=\"background:rgba(232,184,75,0.08);border:1px solid rgba(232,184,75,0.2);border-radius:10px;padding:16px;margin-bottom:24px;\"><p style=\"margin:0;color:#9999aa;font-size:12px;\">Your Question:</p><p style=\"margin:6px 0 0;color:#f0ede8;font-size:14px;font-style:italic;\">\"{{ $json.question }}\"</p></div><div style=\"background:#18181d;border:1px solid #2a2a35;border-radius:12px;padding:24px;\"><p style=\"margin:0;color:#f0ede8;font-size:14px;line-height:1.8;white-space:pre-wrap;\">{{ $json.aiResponse }}</p></div><p style=\"margin-top:20px;color:#888899;font-size:11px;font-family:monospace;\">Powered by Groq · {{ $json.model }}</p></div><div style=\"padding:16px 32px;border-top:1px solid #2a2a35;text-align:center;\"><p style=\"color:#888899;font-size:11px;font-family:monospace;\">AutoLog AI Intelligence · {{ $json.generatedAt }}</p></div></div></body></html>",
+        "options": {}
+      },
+      "id": "node-analytics-email",
+      "name": "Gmail – AI Analytics Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1400, 340],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-oauth-cred",
+          "name": "Gmail – AutoLog"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"event\": \"ai_analytics\", \"aiResponse\": $('Extract AI Analytics Response').first().json.aiResponse }",
+        "options": {}
+      },
+      "id": "node-analytics-respond",
+      "name": "Respond – AI Analytics",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1680, 340]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst vehicle = body.vehicle || {};\nconst services = body.services || [];\nconst userMessage = body.message || '';\nconst chatHistory = body.history || [];\nconst settings = body.settings || {};\nconst costs = body.costs || {};\nconst health = body.health || {};\nconst maintenance = body.maintenance || {};\nconst reminders = body.reminders || [];\nconst patterns = body.patterns || {};\nconst resale = body.resale || {};\n\nconst serviceList = services.slice(0, 8).map((s, i) =>\n  `${s.date}: ${s.type} (₹${((s.parts||0)+(s.labour||0)).toLocaleString('en-IN')}) – ${s.workshop||'N/A'} [${s.mileage||0} km]`\n).join('\\n');\n\nconst dueReminders = reminders.filter(r => !r.done && (r.date || r.km)).slice(0, 5);\nconst reminderList = dueReminders.map(r => `- ${r.title||r.type}: ${r.date ? 'Due '+r.date : ''} ${r.km ? 'at '+r.km+' km' : ''}`).join('\\n');\n\nconst systemPrompt = `You are AutoLog Assistant, a friendly, knowledgeable AI chatbot and personal car advisor embedded in the AutoLog vehicle management app.\n\n=== VEHICLE PROFILE ===\nVehicle: ${vehicle.year||''} ${vehicle.make||''} ${vehicle.model||''} (${vehicle.regNumber||'N/A'})\nFuel: ${vehicle.fuelType||'N/A'} | Engine: ${vehicle.engine||'N/A'} | Transmission: ${vehicle.transmission||'N/A'}\nColor: ${vehicle.color||'N/A'} | Purchase Date: ${vehicle.purchaseDate||'N/A'}\nPurchase Price: ₹${(vehicle.purchasePrice||0).toLocaleString('en-IN')}\nCurrent Mileage: ${(vehicle.currentMileage||0).toLocaleString('en-IN')} km\nAvg Monthly Usage: ${vehicle.avgMonthlyKm||700} km/month\n\n=== HEALTH & COSTS ===\nHealth Score: ${health.score||0}/100 (${health.verdict||'Unknown'})\nTotal Cost of Ownership: ₹${(costs.totalCost||0).toLocaleString('en-IN')}\nAvg Monthly Cost: ₹${(costs.avgMonthlyCost||0).toLocaleString('en-IN')}\nCost per KM: ₹${costs.costPerKm||'0.00'}\nTotal Services Logged: ${services.length}\n\n=== MAINTENANCE STATUS ===\nOil Change Overdue: ${maintenance.oilChangeDue ? 'YES ⚠️' : 'No'}\nKM Since Last Oil Change: ${(maintenance.kmSinceOil||0).toLocaleString('en-IN')} km\nNext Oil Service at: ${(maintenance.nextOilKm||0).toLocaleString('en-IN')} km\nRecurring Brake Issues: ${patterns.brakeRecurring ? 'YES ⚠️ ('+patterns.brakeCount+' times)' : 'No'}\n\n=== RESALE ===\nEstimated Market Value: ₹${(resale.estimatedValue||0).toLocaleString('en-IN')}\nValue Retained: ${resale.valueRetained||0}% | Depreciation: ₹${(resale.depreciationLoss||0).toLocaleString('en-IN')}\n\n=== PENDING REMINDERS ===\n${reminderList || 'No pending reminders.'}\n\n=== RECENT SERVICE HISTORY ===\n${serviceList || 'No service records yet.'}\n\n=== YOUR PERSONALITY ===\n- Friendly, conversational, and reassuring\n- Use clear non-technical language unless the user asks for details\n- Always use ₹ for Indian Rupees\n- Always reference the owner's actual vehicle data when relevant\n- Keep answers concise (2–4 paragraphs max for most queries)\n- Add a helpful tip or reminder when appropriate\n- Give repair cost estimates relevant to the Indian market\n- For safety issues, always prioritize safety over cost\n- You have full context of the car's profile, costs, health, reminders, and service history — use it!`;\n\nconst historyMessages = chatHistory.slice(-8).map(h => ({ role: h.role, content: h.content }));\n\nreturn [{\n  json: {\n    systemPrompt,\n    historyMessages,\n    userMessage,\n    fullPrompt: userMessage,\n    ownerEmail: settings.ownerEmail || '',\n    vehicleMake: vehicle.make || '',\n    vehicleModel: vehicle.model || '',\n    requestedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-chat-prompt",
+      "name": "Build Chat Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 480]
+    },
+
+    {
+      "parameters": {
+        "model": "llama-3.1-8b-instant",
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 1024
+        }
+      },
+      "id": "node-groq-model-chat",
+      "name": "Groq Model – Chat Bot",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [840, 620],
+      "credentials": {
+        "groqApi": {
+          "id": "groq-api-cred",
+          "name": "Groq API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Build Chat Prompt').first().json.userMessage }}",
+        "options": {
+          "systemMessage": "={{ $('Build Chat Prompt').first().json.systemPrompt }}"
+        }
+      },
+      "id": "node-chat-agent",
+      "name": "Groq AI – Chat Bot Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [840, 480]
+    },
+    {
+      "parameters": {
+        "jsCode": "const agentOutput = $input.first().json;\nconst aiReply = agentOutput.output || 'I could not process your request. Please try again.';\n\nreturn [{\n  json: {\n    success: true,\n    event: 'ai_chat',\n    reply: aiReply,\n    model: 'llama-3.1-8b-instant',\n    generatedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-chat-extract",
+      "name": "Extract Chat Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 480]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"event\": \"ai_chat\", \"reply\": $json.reply, \"model\": $json.model }",
+        "options": {}
+      },
+      "id": "node-chat-respond",
+      "name": "Respond – Chat",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1400, 480]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst vehicle = body.vehicle || {};\nconst reminders = body.reminders || [];\nconst settings = body.settings || {};\nconst maintenance = body.maintenance || {};\nconst health = body.health || {};\n\nconst now = new Date();\n\nconst dueReminders = reminders.filter(r => {\n  if (!r.date && !r.km) return false;\n  if (r.done) return false;\n  if (r.date) { const diff = (new Date(r.date) - now) / (1000*60*60*24); return diff <= 7; }\n  if (r.km && vehicle.currentMileage) { return (r.km - vehicle.currentMileage) <= 500; }\n  return false;\n});\n\nconst urgentReminders = dueReminders.filter(r => {\n  if (r.date) { const diff = (new Date(r.date) - now) / (1000*60*60*24); return diff <= 2; }\n  if (r.km && vehicle.currentMileage) { return (r.km - vehicle.currentMileage) <= 100; }\n  return false;\n});\n\nconst maintenanceAlerts = [];\nif (maintenance.oilChangeDue) {\n  maintenanceAlerts.push({ title: '🔴 Oil Change OVERDUE', detail: `${(maintenance.kmSinceOil||0).toLocaleString('en-IN')} km since last oil change. Service immediately!` });\n}\nif (maintenance.nextOilKm && vehicle.currentMileage) {\n  const remaining = maintenance.nextOilKm - vehicle.currentMileage;\n  if (remaining > 0 && remaining <= 500) {\n    maintenanceAlerts.push({ title: '🟡 Oil Change Due Soon', detail: `${remaining.toLocaleString('en-IN')} km remaining until next oil change.` });\n  }\n}\n\nreturn [{\n  json: {\n    event: 'reminder_check',\n    ownerEmail: settings.ownerEmail || '',\n    ownerName: settings.ownerName || 'Vehicle Owner',\n    vehicleMake: vehicle.make || '',\n    vehicleModel: vehicle.model || '',\n    regNumber: vehicle.regNumber || '',\n    currentMileage: vehicle.currentMileage || 0,\n    healthScore: health.score || 0,\n    healthVerdict: health.verdict || 'Unknown',\n    dueReminders,\n    urgentReminders,\n    maintenanceAlerts,\n    totalDue: dueReminders.length,\n    hasUrgent: urgentReminders.length > 0,\n    hasAlerts: maintenanceAlerts.length > 0,\n    checkedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-reminder-parse",
+      "name": "Process Reminders",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 620]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [{ "leftValue": "={{ $json.totalDue + $json.maintenanceAlerts.length }}", "rightValue": 0, "operator": { "type": "number", "operation": "gt" } }],
+          "combinator": "and"
+        }
+      },
+      "id": "node-reminder-if",
+      "name": "Has Reminders?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [840, 620]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.ownerEmail }}",
+        "subject": "={{ $json.hasUrgent ? '🔴 URGENT' : '🔔' }} Vehicle Reminders – {{ $json.vehicleMake }} {{ $json.vehicleModel }} ({{ $json.totalDue + $json.maintenanceAlerts.length }} due)",
+        "emailType": "html",
+        "message": "=<!DOCTYPE html><html><body style=\"font-family:Arial,sans-serif;background:#0a0a0b;color:#f0ede8;padding:32px;\"><div style=\"max-width:600px;margin:0 auto;background:#111114;border:1px solid #2a2a35;border-radius:16px;overflow:hidden;\"><div style=\"background:{{ $json.hasUrgent ? '#e85b4b' : '#e8b84b' }};padding:24px 32px;\"><h1 style=\"margin:0;color:#fff;font-size:20px;\">{{ $json.hasUrgent ? '🔴 URGENT: Action Required' : '🔔 Vehicle Reminders Due' }}</h1><p style=\"margin:4px 0 0;color:rgba(255,255,255,0.8);font-size:12px;\">{{ $json.vehicleMake }} {{ $json.vehicleModel }} · {{ $json.regNumber }} · {{ $json.currentMileage }} km</p></div><div style=\"padding:32px;\"><p style=\"color:#9999aa;\">Hello <strong style=\"color:#f0ede8;\">{{ $json.ownerName }}</strong>, your vehicle has <strong style=\"color:#e8b84b;\">{{ $json.totalDue + $json.maintenanceAlerts.length }} pending item(s)</strong> that need attention.</p><div style=\"background:#18181d;border:1px solid #2a2a35;border-radius:10px;padding:16px;margin-top:24px;\"><p style=\"margin:0;color:#9999aa;font-size:12px;\">Vehicle Health Score: <strong style=\"color:#e8b84b;font-family:monospace;font-size:16px;\">{{ $json.healthScore }}/100</strong> ({{ $json.healthVerdict }})</p></div></div><div style=\"padding:16px 32px;border-top:1px solid #2a2a35;text-align:center;\"><p style=\"color:#888899;font-size:11px;font-family:monospace;\">AutoLog Reminder System · {{ $json.checkedAt }}</p></div></div></body></html>",
+        "options": {}
+      },
+      "id": "node-reminder-email",
+      "name": "Gmail – Reminder Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1120, 560],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-oauth-cred",
+          "name": "Gmail – AutoLog"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"event\": \"reminder_check\", \"emailSent\": true, \"remindersFound\": $('Process Reminders').first().json.totalDue, \"alertsFound\": $('Process Reminders').first().json.maintenanceAlerts.length }",
+        "options": {}
+      },
+      "id": "node-reminder-respond-sent",
+      "name": "Respond – Reminders Sent",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1400, 560]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"success\": true, \"event\": \"reminder_check\", \"emailSent\": false, \"message\": \"No reminders due at this time.\" }",
+        "options": {}
+      },
+      "id": "node-reminder-respond-none",
+      "name": "Respond – No Reminders",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 700]
+    },
+
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst vehicle = body.vehicle || {};\nconst services = body.services || [];\nconst costs = body.costs || {};\nconst maintenance = body.maintenance || {};\nconst health = body.health || {};\nconst resale = body.resale || {};\nconst patterns = body.patterns || {};\nconst settings = body.settings || {};\n\nconst vehicleAge = vehicle.year ? (new Date().getFullYear() - vehicle.year) : 0;\nconst avgServiceCost = services.length > 0 ? Math.round(costs.totalCost / services.length) : 0;\nconst lastService = services.length > 0 ? [...services].sort((a,b) => new Date(b.date)-new Date(a.date))[0] : null;\n\nreturn [{\n  json: {\n    syncType: 'manual_full_sync',\n    ownerName: settings.ownerName || vehicle.ownerName || 'Vehicle Owner',\n    ownerEmail: settings.ownerEmail || vehicle.ownerEmail || '',\n    vehicleSummary: `${vehicle.year||''} ${vehicle.make||''} ${vehicle.model||''} (${vehicle.regNumber||'N/A'})`,\n    vehicleMake: vehicle.make || '',\n    vehicleModel: vehicle.model || '',\n    vehicleYear: vehicle.year || '',\n    regNumber: vehicle.regNumber || '',\n    fuelType: vehicle.fuelType || '',\n    currentMileage: vehicle.currentMileage || 0,\n    vehicleAge,\n    avgMonthlyKm: vehicle.avgMonthlyKm || 700,\n    purchasePrice: vehicle.purchasePrice || 0,\n    purchaseDate: vehicle.purchaseDate || '',\n    engine: vehicle.engine || '',\n    transmission: vehicle.transmission || '',\n    totalCost: costs.totalCost || 0,\n    avgMonthlyCost: costs.avgMonthlyCost || 0,\n    costPerKm: costs.costPerKm || 0,\n    maintenanceRatio: costs.maintenanceRatio || 0,\n    totalServices: services.length,\n    avgServiceCost,\n    lastServiceType: lastService ? lastService.type : 'N/A',\n    lastServiceDate: lastService ? lastService.date : 'N/A',\n    healthScore: health.score || 0,\n    healthVerdict: health.verdict || 'Unknown',\n    oilChangeDue: maintenance.oilChangeDue || false,\n    kmSinceOil: maintenance.kmSinceOil || 0,\n    nextOilKm: maintenance.nextOilKm || 0,\n    brakeIssueDetected: patterns.brakeRecurring || false,\n    brakeCount: patterns.brakeCount || 0,\n    estimatedResaleValue: resale.estimatedValue || 0,\n    valueRetained: resale.valueRetained || 0,\n    depreciationLoss: resale.depreciationLoss || 0,\n    syncedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-sync-parse",
+      "name": "Parse Manual Sync",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 800]
+    },
+
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 1500
+        }
+      },
+      "id": "node-groq-model-sync",
+      "name": "Groq Model – Sync Summary",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [840, 940],
+      "credentials": {
+        "groqApi": {
+          "id": "groq-api-cred",
+          "name": "Groq API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Generate a sync summary report for this vehicle data:\n\nVehicle: {{ $json.vehicleSummary }}\nMileage: {{ $json.currentMileage }} km | Age: {{ $json.vehicleAge }} years\nHealth Score: {{ $json.healthScore }}/100 ({{ $json.healthVerdict }})\n\nFinancials:\n- Total Cost: ₹{{ $json.totalCost }}\n- Monthly Avg: ₹{{ $json.avgMonthlyCost }}\n- Cost/km: ₹{{ $json.costPerKm }}\n- Services: {{ $json.totalServices }} (avg ₹{{ $json.avgServiceCost }} each)\n\nMaintenance:\n- Oil Change Overdue: {{ $json.oilChangeDue ? 'YES - URGENT' : 'No' }}\n- KM Since Oil: {{ $json.kmSinceOil }} km\n- Brake Issues Detected: {{ $json.brakeIssueDetected ? 'YES (' + $json.brakeCount + ' occurrences)' : 'No' }}\n\nResale:\n- Estimated Value: ₹{{ $json.estimatedResaleValue }}\n- Value Retained: {{ $json.valueRetained }}%\n- Depreciation: ₹{{ $json.depreciationLoss }}\n\nLast Service: {{ $json.lastServiceType }} on {{ $json.lastServiceDate }}\n\nProvide: 1) Health assessment 2) Top 3 concerns 3) Financial efficiency rating 4) Immediate action items. Keep under 400 words.",
+        "options": {
+          "systemMessage": "You are AutoLog AI Sync Analyst. When a user syncs their vehicle data, generate a concise, insightful summary report. Use ₹ for currency. Be specific, data-driven, and helpful. Format with clear sections."
+        }
+      },
+      "id": "node-sync-agent",
+      "name": "Groq AI – Sync Summary Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [840, 800]
+    },
+    {
+      "parameters": {
+        "jsCode": "const syncData = $('Parse Manual Sync').first().json;\nconst agentOutput = $input.first().json;\nconst aiSummary = agentOutput.output || 'Sync completed successfully.';\n\nreturn [{\n  json: {\n    ...syncData,\n    aiSummary\n  }\n}];"
+      },
+      "id": "node-sync-merge",
+      "name": "Merge Sync + AI Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 800]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.ownerEmail }}",
+        "subject": "=📊 AutoLog Sync Report – {{ $json.vehicleSummary }} · Health {{ $json.healthScore }}/100",
+        "emailType": "html",
+        "message": "=<!DOCTYPE html><html><body style=\"font-family:Arial,sans-serif;background:#0a0a0b;color:#f0ede8;padding:32px;\"><div style=\"max-width:640px;margin:0 auto;background:#111114;border:1px solid #2a2a35;border-radius:16px;overflow:hidden;\"><div style=\"background:linear-gradient(135deg,#111114,#1f1f26);padding:24px 32px;border-bottom:1px solid #2a2a35;\"><div style=\"display:flex;justify-content:space-between;align-items:center;\"><div><h1 style=\"margin:0;color:#e8b84b;font-size:22px;\">📊 AutoLog Sync Report</h1><p style=\"margin:4px 0 0;color:#9999aa;font-size:12px;font-family:monospace;\">{{ $json.vehicleSummary }}</p></div><div style=\"text-align:right;\"><div style=\"font-size:36px;font-weight:bold;color:{{ $json.healthScore >= 75 ? '#4be89a' : $json.healthScore >= 50 ? '#e8b84b' : '#e85b4b' }};font-family:monospace;\">{{ $json.healthScore }}</div><div style=\"font-size:10px;color:#9999aa;text-transform:uppercase;letter-spacing:1px;\">Health Score</div></div></div></div><div style=\"padding:32px;\">{{ $json.oilChangeDue ? '<div style=\"background:rgba(232,91,75,0.1);border:1px solid rgba(232,91,75,0.4);border-radius:10px;padding:14px;margin-bottom:20px;\"><p style=\"margin:0;color:#e85b4b;font-weight:bold;\">🔴 OIL CHANGE OVERDUE</p><p style=\"margin:4px 0 0;color:#9999aa;font-size:12px;\">' + $json.kmSinceOil + ' km since last oil change. Schedule immediately!</p></div>' : '' }}<h3 style=\"color:#e8b84b;margin:0 0 16px;\">🧠 AI Analysis Summary</h3><div style=\"background:#18181d;border:1px solid #2a2a35;border-radius:12px;padding:20px;\"><p style=\"margin:0;color:#f0ede8;font-size:13px;line-height:1.8;white-space:pre-wrap;\">{{ $json.aiSummary }}</p></div><table style=\"width:100%;border-collapse:collapse;margin-top:24px;\"><tr style=\"border-bottom:1px solid #2a2a35;\"><td style=\"padding:10px 0;color:#9999aa;font-size:12px;\">Monthly Cost Avg</td><td style=\"padding:10px 0;color:#f0ede8;text-align:right;font-family:monospace;\">₹{{ $json.avgMonthlyCost }}</td></tr><tr style=\"border-bottom:1px solid #2a2a35;\"><td style=\"padding:10px 0;color:#9999aa;font-size:12px;\">Cost per KM</td><td style=\"padding:10px 0;color:#f0ede8;text-align:right;font-family:monospace;\">₹{{ $json.costPerKm }}</td></tr><tr style=\"border-bottom:1px solid #2a2a35;\"><td style=\"padding:10px 0;color:#9999aa;font-size:12px;\">Est. Resale Value</td><td style=\"padding:10px 0;color:#e8b84b;text-align:right;font-family:monospace;\">₹{{ $json.estimatedResaleValue }}</td></tr><tr style=\"border-bottom:1px solid #2a2a35;\"><td style=\"padding:10px 0;color:#9999aa;font-size:12px;\">Depreciation</td><td style=\"padding:10px 0;color:#e85b4b;text-align:right;font-family:monospace;\">₹{{ $json.depreciationLoss }}</td></tr><tr><td style=\"padding:10px 0;color:#9999aa;font-size:12px;\">Last Service</td><td style=\"padding:10px 0;color:#f0ede8;text-align:right;font-size:12px;\">{{ $json.lastServiceType }} · {{ $json.lastServiceDate }}</td></tr></table></div><div style=\"padding:16px 32px;border-top:1px solid #2a2a35;text-align:center;\"><p style=\"color:#888899;font-size:11px;font-family:monospace;\">AutoLog · Synced {{ $json.syncedAt }} · Powered by Groq AI</p></div></div></body></html>",
+        "options": {}
+      },
+      "id": "node-sync-email",
+      "name": "Gmail – Sync Report Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1400, 800],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail-oauth-cred",
+          "name": "Gmail – AutoLog"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"event\": \"manual_sync\", \"aiSummary\": $('Merge Sync + AI Summary').first().json.aiSummary, \"healthScore\": $('Merge Sync + AI Summary').first().json.healthScore, \"emailSent\": true, \"syncedAt\": $('Merge Sync + AI Summary').first().json.syncedAt }",
+        "options": {}
+      },
+      "id": "node-sync-respond",
+      "name": "Respond – Sync OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1680, 800]
+    },
+
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 24, "triggerAtHour": 8 }]
+        }
+      },
+      "id": "node-schedule-reminder",
+      "name": "Daily Reminder Scheduler",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 980]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    scheduledCheck: true,\n    checkedAt: new Date().toISOString(),\n    note: 'Connect this to your vehicle data store (e.g. Airtable, Google Sheets, Supabase) to fetch all vehicle records and trigger reminder emails automatically.'\n  }\n}];"
+      },
+      "id": "node-schedule-code",
+      "name": "Scheduled Reminder Logic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [280, 980]
+    },
+
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"success\": false, \"error\": \"Unknown event type. Valid events: setup_save, service_add, ai_analytics, ai_chat, reminder_check, manual_sync\" }",
+        "options": {}
+      },
+      "id": "node-fallback-respond",
+      "name": "Respond – Unknown Event",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [560, 980]
+    }
+  ],
+
+  "connections": {
+    "Webhook – Main Entry": {
+      "main": [[{ "node": "Route by Event", "type": "main", "index": 0 }]]
+    },
+    "Route by Event": {
+      "main": [
+        [{ "node": "Parse Setup Data", "type": "main", "index": 0 }],
+        [{ "node": "Parse Service Record", "type": "main", "index": 0 }],
+        [{ "node": "Build AI Analytics Prompt", "type": "main", "index": 0 }],
+        [{ "node": "Build Chat Prompt", "type": "main", "index": 0 }],
+        [{ "node": "Process Reminders", "type": "main", "index": 0 }],
+        [{ "node": "Parse Manual Sync", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Setup Data": {
+      "main": [[{ "node": "Gmail – Welcome Email", "type": "main", "index": 0 }]]
+    },
+    "Gmail – Welcome Email": {
+      "main": [[{ "node": "Respond – Setup OK", "type": "main", "index": 0 }]]
+    },
+    "Parse Service Record": {
+      "main": [[{ "node": "Gmail – Service Email", "type": "main", "index": 0 }]]
+    },
+    "Gmail – Service Email": {
+      "main": [[{ "node": "Respond – Service OK", "type": "main", "index": 0 }]]
+    },
+    "Build AI Analytics Prompt": {
+      "main": [[{ "node": "Groq AI – Analytics Agent", "type": "main", "index": 0 }]]
+    },
+    "Groq Model – Analytics": {
+      "ai_languageModel": [[{ "node": "Groq AI – Analytics Agent", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Groq AI – Analytics Agent": {
+      "main": [[{ "node": "Extract AI Analytics Response", "type": "main", "index": 0 }]]
+    },
+    "Extract AI Analytics Response": {
+      "main": [[{ "node": "Gmail – AI Analytics Email", "type": "main", "index": 0 }]]
+    },
+    "Gmail – AI Analytics Email": {
+      "main": [[{ "node": "Respond – AI Analytics", "type": "main", "index": 0 }]]
+    },
+    "Build Chat Prompt": {
+      "main": [[{ "node": "Groq AI – Chat Bot Agent", "type": "main", "index": 0 }]]
+    },
+    "Groq Model – Chat Bot": {
+      "ai_languageModel": [[{ "node": "Groq AI – Chat Bot Agent", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Groq AI – Chat Bot Agent": {
+      "main": [[{ "node": "Extract Chat Response", "type": "main", "index": 0 }]]
+    },
+    "Extract Chat Response": {
+      "main": [[{ "node": "Respond – Chat", "type": "main", "index": 0 }]]
+    },
+    "Process Reminders": {
+      "main": [[{ "node": "Has Reminders?", "type": "main", "index": 0 }]]
+    },
+    "Has Reminders?": {
+      "main": [
+        [{ "node": "Gmail – Reminder Email", "type": "main", "index": 0 }],
+        [{ "node": "Respond – No Reminders", "type": "main", "index": 0 }]
+      ]
+    },
+    "Gmail – Reminder Email": {
+      "main": [[{ "node": "Respond – Reminders Sent", "type": "main", "index": 0 }]]
+    },
+    "Parse Manual Sync": {
+      "main": [[{ "node": "Groq AI – Sync Summary Agent", "type": "main", "index": 0 }]]
+    },
+    "Groq Model – Sync Summary": {
+      "ai_languageModel": [[{ "node": "Groq AI – Sync Summary Agent", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Groq AI – Sync Summary Agent": {
+      "main": [[{ "node": "Merge Sync + AI Summary", "type": "main", "index": 0 }]]
+    },
+    "Merge Sync + AI Summary": {
+      "main": [[{ "node": "Gmail – Sync Report Email", "type": "main", "index": 0 }]]
+    },
+    "Gmail – Sync Report Email": {
+      "main": [[{ "node": "Respond – Sync OK", "type": "main", "index": 0 }]]
+    },
+    "Daily Reminder Scheduler": {
+      "main": [[{ "node": "Scheduled Reminder Logic", "type": "main", "index": 0 }]]
+    }
+  },
+
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [
+    { "createdAt": "2025-01-01T00:00:00.000Z", "updatedAt": "2025-04-29T00:00:00.000Z", "id": "autolog-tag", "name": "AutoLog" }
+  ],
+  "triggerCount": 2,
+  "updatedAt": "2025-04-29T00:00:00.000Z",
+  "versionId": "v2.0.0"
+}
